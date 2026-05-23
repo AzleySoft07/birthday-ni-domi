@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Pink Cake & Polaroids - Blow Out the Candle</title>
     <style>
+        /* ===== MODERN FIXES: stable viewport & prevent re-centering jump ===== */
         * {
             margin: 0;
             padding: 0;
@@ -12,24 +13,43 @@
             user-select: none;
         }
 
+        /* CRITICAL: Use 100dvh for dynamic viewport stability */
+        html {
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+            height: 100%;
+        }
+
         body {
-            /* Background image from the provided URL - plain, no enhancement */
+            /* Background image from URL - keeps consistent */
             background-image: url('https://png.pngtree.com/background/20250103/original/pngtree-birthday-background-pink-white-balloon-picture-image_15198640.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            /* Use fixed attachment to prevent background jump on resize */
             background-attachment: fixed;
-            min-height: 100vh;
+            /* 100dvh = dynamic viewport height – fixes mobile address bar issue */
+            min-height: 100dvh;
+            height: 100%;
             display: flex;
             justify-content: center;
-            align-items: center;
+            /* CRITICAL: Use flex-start instead of center to avoid re-centering jump */
+            align-items: flex-start;
             position: relative;
             padding: 20px;
             overflow-x: hidden;
+            overflow-y: auto;
         }
-        html, body {
+
+        /* Wrapper to keep content centered without vertical reflow on height change */
+        .app-wrapper {
+            min-height: 100dvh;
             width: 100%;
-            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
 
         /* simple text on top background - NO background, just plain text */
@@ -52,27 +72,29 @@
             padding: 0 10px;
         }
 
-        /* cake container - responsive centering */
+        /* cake container - responsive centering but now inside stable wrapper */
         .cake {
-            position: absolute;
+            position: relative;
             width: 250px;
             height: 200px;
-            top: 53%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            margin-top: 0;
-            margin-left: 0;
+            margin: 0 auto;
             cursor: pointer;
             z-index: 30;
+            /* Remove absolute positioning + transforms to avoid viewport reflow */
+            transform: none;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            margin-bottom: 0;
         }
 
         /* For smaller screens, scale cake slightly */
         @media (max-width: 480px) {
             .cake {
-                transform: translate(-50%, -50%) scale(0.85);
+                transform: scale(0.85);
+                margin: 0 auto;
             }
             .message-text {
-                color: #ff005a;
                 font-size: 28px;
                 top: 66%;
                 white-space: nowrap;
@@ -81,10 +103,9 @@
 
         @media (max-width: 380px) {
             .cake {
-                transform: translate(-50%, -50%) scale(0.75);
+                transform: scale(0.75);
             }
             .message-text {
-                color: #ff005a;
                 font-size: 24px;
                 top: 66%;
             }
@@ -264,7 +285,7 @@
             100% { transform: skewX(5deg); box-shadow: 0 0 10px rgba(255, 165, 0, 0.5), 0 0 20px rgba(255, 165, 0, 0.5), 0 0 60px rgba(255, 165, 0, 0.5), 0 0 80px rgba(255, 165, 0, 0.5); }
         }
 
-        /* Confetti canvas - plain, no enhancements */
+        /* Confetti canvas - plain */
         #confetti-canvas {
             position: fixed;
             top: 0;
@@ -276,7 +297,7 @@
         }
 
         /* ========== POLAROID GALLERY ========== */
-        /* 5 unique polaroid images scattered across the page, initially hidden */
+        /* polaroid positions still fixed relative to viewport, no reflow issue */
         .polaroid-gallery {
             position: fixed;
             top: 0;
@@ -315,13 +336,11 @@
             transform: scale(1) rotate(var(--rot, 0deg));
         }
         
-        /* On hover or tap: slight lift + rotate nuance for playful effect */
         .polaroid:active {
             transform: scale(1.02) rotate(var(--rot, 0deg));
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
         }
         
-        /* make images fit inside polaroid frame */
         .polaroid-img {
             display: block;
             width: 100%;
@@ -331,7 +350,6 @@
             background: #f8f0e8;
         }
         
-        /* simple caption area */
         .polaroid-caption {
             font-family: 'Comic Sans MS', 'Segoe Script', 'Kalam', cursive;
             font-size: 9px;
@@ -344,14 +362,12 @@
             padding: 2px 0 0;
         }
         
-        /* Different rotation angles for scattered look */
         .polaroid[data-rot="1"] { --rot: -6deg; transform: rotate(-10deg); }
         .polaroid[data-rot="2"] { --rot: 8deg; transform: rotate(8deg); }
         .polaroid[data-rot="3"] { --rot: -4deg; transform: rotate(-8deg); }
         .polaroid[data-rot="4"] { --rot: 11deg; transform: rotate(11deg); }
         .polaroid[data-rot="5"] { --rot: -9deg; transform: rotate(-9deg); }
         
-        /* Responsive positions: tweak for all screen sizes */
         @media (max-width: 780px) {
             .polaroid { width: 95px; padding: 6px 6px 16px 6px; }
             .polaroid-caption { font-size: 8px; }
@@ -362,7 +378,6 @@
             .polaroid-caption { font-size: 7px; }
         }
         
-        /* Pop animation when candle is blown */
         .polaroid.blow-glow {
             animation: polaroidPop 0.4s ease-out forwards;
         }
@@ -373,7 +388,7 @@
             100% { transform: scale(1) rotate(var(--rot, 0deg)); filter: brightness(1);}
         }
 
-        /* ========== MODAL STYLES (Polaroid full view) ========== */
+        /* ========== MODAL STYLES ========== */
         .polaroid-modal {
             position: fixed;
             top: 0;
@@ -447,52 +462,19 @@
             opacity: 0.7;
         }
         
-        /* Better spacing for Android and small screens */
         @media (max-width: 600px) {
             .modal-polaroid-card {
                 width: 85%;
                 max-width: 300px;
                 padding: 20px 20px 35px 20px;
             }
-            
             .modal-polaroid-caption {
                 font-size: 18px;
                 padding: 10px 12px;
                 margin-top: 8px;
             }
-            
-            .modal-polaroid-img {
-                margin-bottom: 18px;
-            }
         }
         
-        @media (max-width: 480px) {
-            .modal-polaroid-card {
-                width: 88%;
-                max-width: 280px;
-                padding: 18px 18px 30px 18px;
-            }
-            
-            .modal-polaroid-caption {
-                font-size: 16px;
-                padding: 10px 10px;
-                line-height: 1.3;
-            }
-        }
-        
-        @media (max-width: 380px) {
-            .modal-polaroid-card {
-                width: 90%;
-                max-width: 260px;
-                padding: 15px 15px 28px 15px;
-            }
-            
-            .modal-polaroid-caption {
-                font-size: 15px;
-                padding: 8px 8px;
-            }
-        }
-
         /* ===== Birthday Blur Transition ===== */
         .birthday-overlay {
             position: fixed;
@@ -530,21 +512,16 @@
             opacity: 1;
         }
 
-        /* 21 -> 22 glow pulse */
         .number-pulse {
             animation: glowPulse 1s ease-in-out infinite alternate;
         }
 
         @keyframes glowPulse {
-            from {
-                transform: scale(1);
-            }
-            to {
-                transform: scale(1.06);
-            }
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
         }
 
-        /* ===== Swipe Up Hint (Integrated) ===== */
+        /* ===== Swipe Up Hint ===== */
         .swipe-hint {
             position: fixed;
             bottom: 30px;
@@ -642,20 +619,26 @@
             font-size: 18px;
             color: #c85d86;
         }
-        .paper-modal::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background-image: radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
-            background-size: 12px 12px;
-            pointer-events: none;
-            opacity: 0.4;
-        }
     </style>
 </head>
 <body>
+    <div class="app-wrapper">
+        <div class="message-text" id="messageText">Touch the cake, bebi</div>
+        <div class="cake" id="cakeContainer">
+            <div class="plate"></div>
+            <div class="layer layer-bottom"></div>
+            <div class="layer layer-middle"></div>
+            <div class="layer layer-top"></div>
+            <div class="icing"></div>
+            <div class="drip drip1"></div>
+            <div class="drip drip2"></div>
+            <div class="drip drip3"></div>
+            <div class="candle" id="candle">
+                <div class="flame" id="flame"></div>
+            </div>
+        </div>
+    </div>
 
-    <div class="message-text" id="messageText">Touch the cake, bebi</div>
     <div class="polaroid-gallery" id="polaroidGallery">
         <div class="polaroid" data-rot="1" style="top: 25%; left: 14%;" data-img-src="image1.png" data-caption="First Meet">
             <img class="polaroid-img" src="image1.png" alt="birthday flowers" loading="lazy">
@@ -679,34 +662,14 @@
         </div>
     </div>
 
-    <div class="cake" id="cakeContainer">
-        <div class="plate"></div>
-        <div class="layer layer-bottom"></div>
-        <div class="layer layer-middle"></div>
-        <div class="layer layer-top"></div>
-        <div class="icing"></div>
-        <div class="drip drip1"></div>
-        <div class="drip drip2"></div>
-        <div class="drip drip3"></div>
-        <div class="candle" id="candle">
-            <div class="flame" id="flame"></div>
-        </div>
-    </div>
-
     <canvas id="confetti-canvas"></canvas>
-
-    <!-- Birthday Transition Overlay -->
     <div id="birthdayOverlay" class="birthday-overlay">
         <div class="birthday-number" id="birthdayNumber">21</div>
     </div>
-
-    <!-- Swipe Up Hint -->
     <div id="swipeHint" class="swipe-hint">
         <div class="swipe-arrow">↑</div>
         <div class="swipe-text">Swipe Up</div>
     </div>
-
-    <!-- Birthday Letter Modal -->
     <div id="birthdayLetterModal" class="birthday-letter-modal">
         <div class="paper-modal">
             <div class="paper-top"></div>
@@ -720,8 +683,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Modal for polaroid full view -->
     <div id="polaroidModal" class="polaroid-modal">
         <div class="modal-polaroid-card" id="modalCard">
             <img id="modalImg" class="modal-polaroid-img" src="" alt="Enlarged polaroid">
@@ -730,679 +691,172 @@
     </div>
 
     <script>
-(function () {
+    (function () {
+        const flame = document.getElementById('flame');
+        const cakeContainer = document.getElementById('cakeContainer');
+        const messageEl = document.getElementById('messageText');
+        const confettiCanvas = document.getElementById('confetti-canvas');
+        const birthdayOverlay = document.getElementById('birthdayOverlay');
+        const birthdayNumber = document.getElementById('birthdayNumber');
+        const swipeHint = document.getElementById('swipeHint');
+        const birthdayLetterModal = document.getElementById('birthdayLetterModal');
 
-    const flame = document.getElementById('flame');
-    const cakeContainer = document.getElementById('cakeContainer');
-    const messageEl = document.getElementById('messageText');
-    const confettiCanvas = document.getElementById('confetti-canvas');
+        let mediaStream = null, audioContext = null, sourceNode = null, analyserNode = null, animationFrameId = null;
+        let isMicActive = false, isBlownOut = false, cakeTouched = false;
+        const BLOW_THRESHOLD = 125, BLOW_COOLDOWN_MS = 1200;
+        let lastBlowTime = 0;
+        let confettiActive = false, confettiPieces = [], animationId = null;
+        const polaroids = document.querySelectorAll('.polaroid');
+        const modal = document.getElementById('polaroidModal');
+        const modalImg = document.getElementById('modalImg');
+        const modalCaption = document.getElementById('modalCaption');
+        const modalCard = document.getElementById('modalCard');
 
-    // Birthday overlay
-    const birthdayOverlay = document.getElementById('birthdayOverlay');
-    const birthdayNumber = document.getElementById('birthdayNumber');
+        function updateMessage(text) { if(messageEl) messageEl.textContent = text; }
 
-    // Swipe + Letter
-    const swipeHint = document.getElementById('swipeHint');
-    const birthdayLetterModal = document.getElementById('birthdayLetterModal');
+        // confetti logic
+        function resizeCanvas() { if(confettiCanvas) { confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; } }
+        resizeCanvas(); window.addEventListener('resize', resizeCanvas);
 
-    let mediaStream = null;
-    let audioContext = null;
-    let sourceNode = null;
-    let analyserNode = null;
-    let animationFrameId = null;
-
-    let isMicActive = false;
-    let isBlownOut = false;
-    let cakeTouched = false;
-
-    // ===== CONFETTI =====
-
-    const ctx = confettiCanvas.getContext('2d');
-
-    let confettiActive = false;
-    let confettiPieces = [];
-    let animationId = null;
-
-    // Blow detection
-    const BLOW_THRESHOLD = 125;
-    const BLOW_COOLDOWN_MS = 1200;
-    let lastBlowTime = 0;
-
-    // Polaroids
-    const polaroids = document.querySelectorAll('.polaroid');
-
-    // Modal
-    const modal = document.getElementById('polaroidModal');
-    const modalImg = document.getElementById('modalImg');
-    const modalCaption = document.getElementById('modalCaption');
-    const modalCard = document.getElementById('modalCard');
-
-    function updateMessage(text) {
-        messageEl.textContent = text;
-    }
-
-    // ===== CANVAS =====
-
-    function resizeCanvas() {
-        confettiCanvas.width = window.innerWidth;
-        confettiCanvas.height = window.innerHeight;
-    }
-
-    resizeCanvas();
-
-    window.addEventListener('resize', resizeCanvas);
-
-    // ===== LIGHT INFINITE CONFETTI =====
-
-    class ConfettiPiece {
-
-        constructor() {
-            this.reset(true);
-        }
-
-        reset(first = false) {
-
-            this.x = Math.random() * confettiCanvas.width;
-
-            this.y = first
-                ? Math.random() * confettiCanvas.height
-                : -20;
-
-            this.size = Math.random() * 6 + 2;
-
-            this.speedY = Math.random() * 1.5 + 0.8;
-            this.speedX = Math.random() * 1 - 0.5;
-
-            this.rotation = Math.random() * 360;
-            this.rotationSpeed = Math.random() * 2 - 1;
-
-            const colors = [
-                "#ff7aa2",
-                "#ffd166",
-                "#7bdff2",
-                "#b2f7ef",
-                "#f7d6e0",
-                "#ffffff"
-            ];
-
-            this.color = colors[
-                Math.floor(Math.random() * colors.length)
-            ];
-
-            this.opacity = Math.random() * 0.5 + 0.3;
-        }
-
-        update() {
-
-            this.y += this.speedY;
-            this.x += this.speedX;
-            this.rotation += this.rotationSpeed;
-
-            // recycle
-            if (this.y > confettiCanvas.height + 20) {
-                this.reset();
+        class ConfettiPiece {
+            constructor() { this.reset(true); }
+            reset(first = false) {
+                this.x = Math.random() * confettiCanvas.width;
+                this.y = first ? Math.random() * confettiCanvas.height : -20;
+                this.size = Math.random() * 6 + 2;
+                this.speedY = Math.random() * 1.5 + 0.8;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.rotation = Math.random() * 360;
+                this.rotationSpeed = Math.random() * 2 - 1;
+                const colors = ["#ff7aa2","#ffd166","#7bdff2","#b2f7ef","#f7d6e0","#ffffff"];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.opacity = Math.random() * 0.5 + 0.3;
             }
-
-            // wrap horizontally
-            if (this.x > confettiCanvas.width) {
-                this.x = 0;
+            update() {
+                this.y += this.speedY; this.x += this.speedX; this.rotation += this.rotationSpeed;
+                if (this.y > confettiCanvas.height + 20) this.reset();
+                if (this.x > confettiCanvas.width) this.x = 0;
+                if (this.x < 0) this.x = confettiCanvas.width;
             }
+            draw(ctx) { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation * Math.PI / 180); ctx.globalAlpha = this.opacity; ctx.fillStyle = this.color; ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); ctx.restore(); }
+        }
 
-            if (this.x < 0) {
-                this.x = confettiCanvas.width;
+        function startConfetti() {
+            if (confettiActive) return;
+            confettiActive = true; confettiPieces = [];
+            for (let i = 0; i < 70; i++) confettiPieces.push(new ConfettiPiece());
+            function animateConfetti() {
+                if (!confettiActive) return;
+                const ctxCanvas = confettiCanvas.getContext('2d');
+                ctxCanvas.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+                for (const piece of confettiPieces) { piece.update(); piece.draw(ctxCanvas); }
+                animationId = requestAnimationFrame(animateConfetti);
             }
+            animateConfetti();
         }
+        function stopConfetti() { confettiActive = false; if(animationId) cancelAnimationFrame(animationId); animationId = null; const ctxCanvas = confettiCanvas.getContext('2d'); ctxCanvas.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height); }
 
-        draw(ctx) {
-
-            ctx.save();
-
-            ctx.translate(this.x, this.y);
-
-            ctx.rotate(
-                this.rotation * Math.PI / 180
-            );
-
-            ctx.globalAlpha = this.opacity;
-
-            ctx.fillStyle = this.color;
-
-            ctx.fillRect(
-                -this.size / 2,
-                -this.size / 2,
-                this.size,
-                this.size
-            );
-
-            ctx.restore();
-        }
-    }
-
-    function startConfetti() {
-
-        if (confettiActive) return;
-
-        confettiActive = true;
-
-        confettiPieces = [];
-
-        // lightweight amount
-        const CONFETTI_COUNT = 70;
-
-        for (let i = 0; i < CONFETTI_COUNT; i++) {
-            confettiPieces.push(
-                new ConfettiPiece()
-            );
-        }
-
-        function animateConfetti() {
-
-            if (!confettiActive) return;
-
-            ctx.clearRect(
-                0,
-                0,
-                confettiCanvas.width,
-                confettiCanvas.height
-            );
-
-            for (const piece of confettiPieces) {
-                piece.update();
-                piece.draw(ctx);
-            }
-
-            animationId =
-                requestAnimationFrame(
-                    animateConfetti
-                );
-        }
-
-        animateConfetti();
-    }
-
-    function stopConfetti() {
-
-        confettiActive = false;
-
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-            animationId = null;
-        }
-
-        ctx.clearRect(
-            0,
-            0,
-            confettiCanvas.width,
-            confettiCanvas.height
-        );
-    }
-
-    // ===== POLAROIDS =====
-
-    function revealAndPopPolaroids() {
-
-        polaroids.forEach((polaroid, idx) => {
-
-            setTimeout(() => {
-
-                polaroid.classList.add('revealed');
-
+        function revealAndPopPolaroids() {
+            polaroids.forEach((polaroid, idx) => {
                 setTimeout(() => {
+                    polaroid.classList.add('revealed');
+                    setTimeout(() => { polaroid.classList.add('blow-glow'); setTimeout(() => polaroid.classList.remove('blow-glow'), 450); }, 50);
+                }, idx * 80);
+            });
+        }
 
-                    polaroid.classList.add('blow-glow');
-
-                    setTimeout(() => {
-                        polaroid.classList.remove('blow-glow');
-                    }, 450);
-
-                }, 50);
-
-            }, idx * 80);
-        });
-    }
-
-    // ===== BIRTHDAY TRANSITION =====
-
-    function playBirthdayTransition() {
-
-        if (!birthdayOverlay) return;
-
-        birthdayOverlay.classList.add('active');
-
-        birthdayNumber.classList.add('number-pulse');
-
-        birthdayNumber.textContent = "21";
-
-        setTimeout(() => {
-
-            birthdayNumber.style.transform = "scale(1.25)";
-            birthdayNumber.style.opacity = "0";
-
+        function playBirthdayTransition() {
+            if (!birthdayOverlay) return;
+            birthdayOverlay.classList.add('active');
+            birthdayNumber.classList.add('number-pulse');
+            birthdayNumber.textContent = "21";
             setTimeout(() => {
+                birthdayNumber.style.transform = "scale(1.25)"; birthdayNumber.style.opacity = "0";
+                setTimeout(() => {
+                    birthdayNumber.textContent = "22";
+                    birthdayNumber.classList.remove('number-pulse');
+                    birthdayNumber.style.transform = "scale(0.7)"; birthdayNumber.style.opacity = "0";
+                    requestAnimationFrame(() => { birthdayNumber.style.transform = "scale(1)"; birthdayNumber.style.opacity = "1"; birthdayNumber.classList.add('number-pulse'); });
+                }, 350);
+            }, 1500);
+            setTimeout(() => { birthdayOverlay.classList.remove('active'); birthdayNumber.classList.remove('number-pulse'); birthdayNumber.style.transform = ""; birthdayNumber.style.opacity = ""; setTimeout(() => { if (isBlownOut) swipeHint.classList.add('show'); }, 400); }, 4500);
+        }
 
-                birthdayNumber.textContent = "22";
-
-                birthdayNumber.classList.remove('number-pulse');
-
-                birthdayNumber.style.transform = "scale(0.7)";
-                birthdayNumber.style.opacity = "0";
-
-                requestAnimationFrame(() => {
-
-                    birthdayNumber.style.transform = "scale(1)";
-                    birthdayNumber.style.opacity = "1";
-
-                    birthdayNumber.classList.add('number-pulse');
-
-                });
-
-            }, 350);
-
-        }, 1500);
-
-        setTimeout(() => {
-
-            birthdayOverlay.classList.remove('active');
-
-            birthdayNumber.classList.remove('number-pulse');
-
-            birthdayNumber.style.transform = "";
-            birthdayNumber.style.opacity = "";
-
-            setTimeout(() => {
-
-                if (isBlownOut) {
-                    swipeHint.classList.add('show');
-                }
-
-            }, 400);
-
-        }, 4500);
-    }
-
-    // ===== CAKE =====
-
-    function onCakeTouch() {
-
-        if (cakeTouched || isBlownOut) return;
-
-        cakeTouched = true;
-
-        updateMessage("Blow the candle!");
-
-        initMicrophone();
-    }
-
-    function blowOutCandle() {
-
-        if (isBlownOut) return;
-
-        isBlownOut = true;
-
-        flame.classList.add('blown-out');
-
-        cakeContainer.classList.add('blown');
-
-        updateMessage("Happy Birthday, Bebi!");
-
-        startConfetti();
-
-        playBirthdayTransition();
-
-        revealAndPopPolaroids();
-
-        closeMicrophone();
-    }
-
-    // ===== MICROPHONE =====
-
-    async function initMicrophone() {
-
-        if (
-            audioContext &&
-            audioContext.state !== 'closed'
-        ) {
+        function blowOutCandle() {
+            if (isBlownOut) return;
+            isBlownOut = true;
+            flame.classList.add('blown-out');
+            cakeContainer.classList.add('blown');
+            updateMessage("Happy Birthday, Bebi!");
+            startConfetti();
+            playBirthdayTransition();
+            revealAndPopPolaroids();
             closeMicrophone();
         }
 
-        try {
-
-            const stream =
-                await navigator.mediaDevices.getUserMedia({
-                    audio: true
-                });
-
-            mediaStream = stream;
-
-            audioContext =
-                new (
-                    window.AudioContext ||
-                    window.webkitAudioContext
-                )();
-
-            analyserNode =
-                audioContext.createAnalyser();
-
-            analyserNode.fftSize = 256;
-
-            const bufferLength =
-                analyserNode.frequencyBinCount;
-
-            const dataArray =
-                new Uint8Array(bufferLength);
-
-            sourceNode =
-                audioContext.createMediaStreamSource(
-                    stream
-                );
-
-            sourceNode.connect(analyserNode);
-
-            if (audioContext.state === 'suspended') {
-                await audioContext.resume();
-            }
-
-            isMicActive = true;
-
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
-
-            function checkVolume() {
-
-                if (
-                    !analyserNode ||
-                    !isMicActive ||
-                    isBlownOut
-                ) {
-
-                    if (animationFrameId) {
-                        cancelAnimationFrame(animationFrameId);
-                    }
-
-                    return;
-                }
-
-                analyserNode.getByteTimeDomainData(dataArray);
-
-                let maxSample = 0;
-
-                for (let i = 0; i < bufferLength; i++) {
-
-                    let v =
-                        (dataArray[i] - 128) / 128;
-
-                    maxSample =
-                        Math.max(maxSample, Math.abs(v));
-                }
-
-                const volumeEstimate =
-                    maxSample * 210;
-
-                const now = Date.now();
-
-                if (
-                    volumeEstimate > BLOW_THRESHOLD &&
-                    (now - lastBlowTime) > BLOW_COOLDOWN_MS
-                ) {
-
-                    lastBlowTime = now;
-
-                    blowOutCandle();
-                }
-
-                animationFrameId =
-                    requestAnimationFrame(checkVolume);
-            }
-
-            checkVolume();
-
-        } catch (err) {
-
-            console.error("Microphone error:", err);
-
-            updateMessage(
-                "🔇 Mic needed! Tap cake & allow mic."
-            );
-
-            isMicActive = false;
-        }
-    }
-
-    function closeMicrophone() {
-
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-        }
-
-        if (sourceNode) {
-
+        async function initMicrophone() {
+            if (audioContext && audioContext.state !== 'closed') closeMicrophone();
             try {
-                sourceNode.disconnect();
-            } catch (e) {}
-
-            sourceNode = null;
-        }
-
-        if (analyserNode) {
-
-            try {
-                analyserNode.disconnect();
-            } catch (e) {}
-
-            analyserNode = null;
-        }
-
-        if (audioContext) {
-
-            audioContext
-                .close()
-                .catch(e => console.warn);
-
-            audioContext = null;
-        }
-
-        if (mediaStream) {
-
-            mediaStream
-                .getTracks()
-                .forEach(track => track.stop());
-
-            mediaStream = null;
-        }
-
-        isMicActive = false;
-    }
-
-    // ===== POLAROID MODAL =====
-
-    function openPolaroidModal(imgSrc, captionText) {
-
-        if (!modal) return;
-
-        modalImg.src = imgSrc;
-
-        modalCaption.textContent = captionText;
-
-        modal.classList.add('active');
-
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal() {
-
-        if (!modal) return;
-
-        modal.classList.remove('active');
-
-        document.body.style.overflow = '';
-
-        setTimeout(() => {
-
-            if (!modal.classList.contains('active')) {
-                modalImg.src = '';
-            }
-
-        }, 200);
-    }
-
-    polaroids.forEach(polaroid => {
-
-        const imgElement =
-            polaroid.querySelector('.polaroid-img');
-
-        const captionDiv =
-            polaroid.querySelector('.polaroid-caption');
-
-        let highResSrc =
-            polaroid.getAttribute('data-img-src');
-
-        if (!highResSrc && imgElement) {
-            highResSrc = imgElement.src;
-        }
-
-        polaroid.addEventListener('click', (e) => {
-
-            e.stopPropagation();
-
-            const captionText =
-                captionDiv
-                    ? captionDiv.textContent.trim()
-                    : '';
-
-            openPolaroidModal(
-                highResSrc,
-                captionText
-            );
-
-            if (navigator.vibrate) {
-                navigator.vibrate(30);
-            }
-        });
-    });
-
-    if (modal) {
-
-        modal.addEventListener('click', () => {
-            closeModal();
-        });
-
-        modalCard.addEventListener('click', (e) => {
-            e.stopPropagation();
-            closeModal();
-        });
-    }
-
-    // ===== SWIPE =====
-
-    let touchStartY = 0;
-
-    window.addEventListener(
-        'touchstart',
-        (e) => {
-            touchStartY =
-                e.changedTouches[0].screenY;
-        },
-        { passive: true }
-    );
-
-    window.addEventListener(
-        'touchend',
-        (e) => {
-
-            const touchEndY =
-                e.changedTouches[0].screenY;
-
-            const swipeDistance =
-                touchStartY - touchEndY;
-
-            if (
-                swipeDistance > 80 &&
-                isBlownOut
-            ) {
-                openBirthdayLetter();
-            }
-
-        },
-        { passive: true }
-    );
-
-    function openBirthdayLetter() {
-
-        swipeHint.classList.remove('show');
-
-        birthdayLetterModal.classList.add('active');
-
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeBirthdayLetter() {
-
-        birthdayLetterModal.classList.remove('active');
-
-        document.body.style.overflow = '';
-    }
-
-    if (birthdayLetterModal) {
-
-        birthdayLetterModal.addEventListener(
-            'click',
-            (e) => {
-
-                if (e.target === birthdayLetterModal) {
-                    closeBirthdayLetter();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaStream = stream;
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyserNode = audioContext.createAnalyser();
+                analyserNode.fftSize = 256;
+                const bufferLength = analyserNode.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                sourceNode = audioContext.createMediaStreamSource(stream);
+                sourceNode.connect(analyserNode);
+                if (audioContext.state === 'suspended') await audioContext.resume();
+                isMicActive = true;
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                function checkVolume() {
+                    if (!analyserNode || !isMicActive || isBlownOut) { if (animationFrameId) cancelAnimationFrame(animationFrameId); return; }
+                    analyserNode.getByteTimeDomainData(dataArray);
+                    let maxSample = 0;
+                    for (let i = 0; i < bufferLength; i++) { let v = (dataArray[i] - 128) / 128; maxSample = Math.max(maxSample, Math.abs(v)); }
+                    const volumeEstimate = maxSample * 210;
+                    const now = Date.now();
+                    if (volumeEstimate > BLOW_THRESHOLD && (now - lastBlowTime) > BLOW_COOLDOWN_MS) { lastBlowTime = now; blowOutCandle(); }
+                    animationFrameId = requestAnimationFrame(checkVolume);
                 }
-            }
-        );
-
-        const paperCard =
-            birthdayLetterModal.querySelector(
-                '.paper-modal'
-            );
-
-        if (paperCard) {
-
-            paperCard.addEventListener(
-                'click',
-                (e) => e.stopPropagation()
-            );
+                checkVolume();
+            } catch (err) { console.error("Microphone error:", err); updateMessage("🔇 Mic needed! Tap cake & allow mic."); isMicActive = false; }
         }
-    }
 
-    // ===== CAKE EVENTS =====
-
-    cakeContainer.addEventListener('click', (e) => {
-
-        e.stopPropagation();
-
-        onCakeTouch();
-    });
-
-    cakeContainer.addEventListener(
-        'touchstart',
-        (e) => {
-
-            e.stopPropagation();
-
-            onCakeTouch();
+        function closeMicrophone() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (sourceNode) try { sourceNode.disconnect(); } catch(e) {}
+            if (analyserNode) try { analyserNode.disconnect(); } catch(e) {}
+            if (audioContext) audioContext.close().catch(e => console.warn);
+            if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
+            sourceNode = null; analyserNode = null; audioContext = null; mediaStream = null; isMicActive = false;
         }
-    );
 
-    // ===== CLEANUP =====
+        function onCakeTouch() { if (cakeTouched || isBlownOut) return; cakeTouched = true; updateMessage("Blow the candle!"); initMicrophone(); }
 
-    window.addEventListener('beforeunload', () => {
+        function openPolaroidModal(imgSrc, captionText) { if(modal) { modalImg.src = imgSrc; modalCaption.textContent = captionText; modal.classList.add('active'); document.body.style.overflow = 'hidden'; } }
+        function closeModal() { if(modal) { modal.classList.remove('active'); document.body.style.overflow = ''; setTimeout(() => { if(!modal.classList.contains('active')) modalImg.src = ''; }, 200); } }
 
-        closeMicrophone();
+        polaroids.forEach(p => {
+            const imgEl = p.querySelector('.polaroid-img');
+            const captionDiv = p.querySelector('.polaroid-caption');
+            let highResSrc = p.getAttribute('data-img-src');
+            if (!highResSrc && imgEl) highResSrc = imgEl.src;
+            p.addEventListener('click', (e) => { e.stopPropagation(); openPolaroidModal(highResSrc, captionDiv ? captionDiv.textContent.trim() : ''); if (navigator.vibrate) navigator.vibrate(30); });
+        });
+        if (modal) { modal.addEventListener('click', closeModal); modalCard?.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); }); }
 
-        stopConfetti();
+        let touchStartY = 0;
+        window.addEventListener('touchstart', (e) => { touchStartY = e.changedTouches[0].screenY; }, { passive: true });
+        window.addEventListener('touchend', (e) => { const swipeDistance = touchStartY - e.changedTouches[0].screenY; if (swipeDistance > 80 && isBlownOut) { swipeHint.classList.remove('show'); birthdayLetterModal.classList.add('active'); document.body.style.overflow = 'hidden'; } }, { passive: true });
+        function closeBirthdayLetter() { birthdayLetterModal.classList.remove('active'); document.body.style.overflow = ''; }
+        if(birthdayLetterModal) { birthdayLetterModal.addEventListener('click', (e) => { if(e.target === birthdayLetterModal) closeBirthdayLetter(); }); const paperCard = birthdayLetterModal.querySelector('.paper-modal'); if(paperCard) paperCard.addEventListener('click', (e) => e.stopPropagation()); }
 
-        closeModal();
-    });
-
-    updateMessage("Touch the cake, bebi");
-
-})();
-</script>
+        cakeContainer.addEventListener('click', (e) => { e.stopPropagation(); onCakeTouch(); });
+        cakeContainer.addEventListener('touchstart', (e) => { e.stopPropagation(); onCakeTouch(); });
+        window.addEventListener('beforeunload', () => { closeMicrophone(); stopConfetti(); closeModal(); });
+        updateMessage("Touch the cake, bebi");
+    })();
+    </script>
 </body>
 </html>
