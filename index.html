@@ -812,10 +812,15 @@
                 if (animationFrameId) cancelAnimationFrame(animationFrameId);
                 function checkVolume() {
                     if (!analyserNode || !isMicActive || isBlownOut) { if (animationFrameId) cancelAnimationFrame(animationFrameId); return; }
-                    analyserNode.getByteTimeDomainData(dataArray);
-                    let maxSample = 0;
-                    for (let i = 0; i < bufferLength; i++) { let v = (dataArray[i] - 128) / 128; maxSample = Math.max(maxSample, Math.abs(v)); }
-                    const volumeEstimate = maxSample * 210;
+analyserNode.getByteFrequencyData(dataArray);
+
+let sum = 0;
+
+for (let i = 0; i < bufferLength; i++) {
+    sum += dataArray[i];
+}
+
+const volumeEstimate = sum / bufferLength;
                     const now = Date.now();
                     if (volumeEstimate > BLOW_THRESHOLD && (now - lastBlowTime) > BLOW_COOLDOWN_MS) { lastBlowTime = now; blowOutCandle(); }
                     animationFrameId = requestAnimationFrame(checkVolume);
