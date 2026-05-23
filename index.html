@@ -691,178 +691,570 @@
         </div>
     </div>
 
-    <script>
-    (function () {
-        const flame = document.getElementById('flame');
-        const cakeContainer = document.getElementById('cakeContainer');
-        const messageEl = document.getElementById('messageText');
-        const confettiCanvas = document.getElementById('confetti-canvas');
-        const birthdayOverlay = document.getElementById('birthdayOverlay');
-        const birthdayNumber = document.getElementById('birthdayNumber');
-        const swipeHint = document.getElementById('swipeHint');
-        const birthdayLetterModal = document.getElementById('birthdayLetterModal');
+   <script>
+(function () {
+    const flame = document.getElementById('flame');
+    const cakeContainer = document.getElementById('cakeContainer');
+    const messageEl = document.getElementById('messageText');
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const birthdayOverlay = document.getElementById('birthdayOverlay');
+    const birthdayNumber = document.getElementById('birthdayNumber');
+    const swipeHint = document.getElementById('swipeHint');
+    const birthdayLetterModal = document.getElementById('birthdayLetterModal');
 
-        let mediaStream = null, audioContext = null, sourceNode = null, analyserNode = null, animationFrameId = null;
-        let isMicActive = false, isBlownOut = false, cakeTouched = false;
-        const BLOW_THRESHOLD = 125, BLOW_COOLDOWN_MS = 1200;
-        let lastBlowTime = 0;
-        let confettiActive = false, confettiPieces = [], animationId = null;
-        const polaroids = document.querySelectorAll('.polaroid');
-        const modal = document.getElementById('polaroidModal');
-        const modalImg = document.getElementById('modalImg');
-        const modalCaption = document.getElementById('modalCaption');
-        const modalCard = document.getElementById('modalCard');
+    let mediaStream = null;
+    let audioContext = null;
+    let sourceNode = null;
+    let analyserNode = null;
+    let animationFrameId = null;
 
-        function updateMessage(text) { if(messageEl) messageEl.textContent = text; }
+    let isMicActive = false;
+    let isBlownOut = false;
+    let cakeTouched = false;
 
-        // confetti logic
-        function resizeCanvas() { if(confettiCanvas) { confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; } }
-        resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+    // LOWERED threshold for better sensitivity
+    const BLOW_THRESHOLD = 40;
 
-        class ConfettiPiece {
-            constructor() { this.reset(true); }
-            reset(first = false) {
-                this.x = Math.random() * confettiCanvas.width;
-                this.y = first ? Math.random() * confettiCanvas.height : -20;
-                this.size = Math.random() * 6 + 2;
-                this.speedY = Math.random() * 1.5 + 0.8;
-                this.speedX = Math.random() * 1 - 0.5;
-                this.rotation = Math.random() * 360;
-                this.rotationSpeed = Math.random() * 2 - 1;
-                const colors = ["#ff7aa2","#ffd166","#7bdff2","#b2f7ef","#f7d6e0","#ffffff"];
-                this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.opacity = Math.random() * 0.5 + 0.3;
-            }
-            update() {
-                this.y += this.speedY; this.x += this.speedX; this.rotation += this.rotationSpeed;
-                if (this.y > confettiCanvas.height + 20) this.reset();
-                if (this.x > confettiCanvas.width) this.x = 0;
-                if (this.x < 0) this.x = confettiCanvas.width;
-            }
-            draw(ctx) { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation * Math.PI / 180); ctx.globalAlpha = this.opacity; ctx.fillStyle = this.color; ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); ctx.restore(); }
+    const BLOW_COOLDOWN_MS = 1200;
+    let lastBlowTime = 0;
+
+    let confettiActive = false;
+    let confettiPieces = [];
+    let animationId = null;
+
+    const polaroids = document.querySelectorAll('.polaroid');
+    const modal = document.getElementById('polaroidModal');
+    const modalImg = document.getElementById('modalImg');
+    const modalCaption = document.getElementById('modalCaption');
+    const modalCard = document.getElementById('modalCard');
+
+    function updateMessage(text) {
+        if (messageEl) messageEl.textContent = text;
+    }
+
+    // =========================
+    // CONFETTI
+    // =========================
+    function resizeCanvas() {
+        if (confettiCanvas) {
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+        }
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    class ConfettiPiece {
+        constructor() {
+            this.reset(true);
         }
 
-        function startConfetti() {
-            if (confettiActive) return;
-            confettiActive = true; confettiPieces = [];
-            for (let i = 0; i < 70; i++) confettiPieces.push(new ConfettiPiece());
-            function animateConfetti() {
-                if (!confettiActive) return;
-                const ctxCanvas = confettiCanvas.getContext('2d');
-                ctxCanvas.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-                for (const piece of confettiPieces) { piece.update(); piece.draw(ctxCanvas); }
-                animationId = requestAnimationFrame(animateConfetti);
+        reset(first = false) {
+            this.x = Math.random() * confettiCanvas.width;
+            this.y = first ? Math.random() * confettiCanvas.height : -20;
+            this.size = Math.random() * 6 + 2;
+            this.speedY = Math.random() * 1.5 + 0.8;
+            this.speedX = Math.random() * 1 - 0.5;
+            this.rotation = Math.random() * 360;
+            this.rotationSpeed = Math.random() * 2 - 1;
+
+            const colors = [
+                "#ff7aa2",
+                "#ffd166",
+                "#7bdff2",
+                "#b2f7ef",
+                "#f7d6e0",
+                "#ffffff"
+            ];
+
+            this.color = colors[Math.floor(Math.random() * colors.length)];
+            this.opacity = Math.random() * 0.5 + 0.3;
+        }
+
+        update() {
+            this.y += this.speedY;
+            this.x += this.speedX;
+            this.rotation += this.rotationSpeed;
+
+            if (this.y > confettiCanvas.height + 20) {
+                this.reset();
             }
-            animateConfetti();
-        }
-        function stopConfetti() { confettiActive = false; if(animationId) cancelAnimationFrame(animationId); animationId = null; const ctxCanvas = confettiCanvas.getContext('2d'); ctxCanvas.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height); }
 
-        function revealAndPopPolaroids() {
-            polaroids.forEach((polaroid, idx) => {
-                setTimeout(() => {
-                    polaroid.classList.add('revealed');
-                    setTimeout(() => { polaroid.classList.add('blow-glow'); setTimeout(() => polaroid.classList.remove('blow-glow'), 450); }, 50);
-                }, idx * 80);
-            });
+            if (this.x > confettiCanvas.width) this.x = 0;
+            if (this.x < 0) this.x = confettiCanvas.width;
         }
 
-        function playBirthdayTransition() {
-            if (!birthdayOverlay) return;
-            birthdayOverlay.classList.add('active');
-            birthdayNumber.classList.add('number-pulse');
-            birthdayNumber.textContent = "21";
+        draw(ctx) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.rotation * Math.PI / 180);
+            ctx.globalAlpha = this.opacity;
+            ctx.fillStyle = this.color;
+            ctx.fillRect(
+                -this.size / 2,
+                -this.size / 2,
+                this.size,
+                this.size
+            );
+            ctx.restore();
+        }
+    }
+
+    function startConfetti() {
+        if (confettiActive) return;
+
+        confettiActive = true;
+        confettiPieces = [];
+
+        for (let i = 0; i < 70; i++) {
+            confettiPieces.push(new ConfettiPiece());
+        }
+
+        function animateConfetti() {
+            if (!confettiActive) return;
+
+            const ctxCanvas = confettiCanvas.getContext('2d');
+
+            ctxCanvas.clearRect(
+                0,
+                0,
+                confettiCanvas.width,
+                confettiCanvas.height
+            );
+
+            for (const piece of confettiPieces) {
+                piece.update();
+                piece.draw(ctxCanvas);
+            }
+
+            animationId = requestAnimationFrame(animateConfetti);
+        }
+
+        animateConfetti();
+    }
+
+    function stopConfetti() {
+        confettiActive = false;
+
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+        }
+
+        animationId = null;
+
+        const ctxCanvas = confettiCanvas.getContext('2d');
+
+        ctxCanvas.clearRect(
+            0,
+            0,
+            confettiCanvas.width,
+            confettiCanvas.height
+        );
+    }
+
+    // =========================
+    // POLAROIDS
+    // =========================
+    function revealAndPopPolaroids() {
+        polaroids.forEach((polaroid, idx) => {
             setTimeout(() => {
-                birthdayNumber.style.transform = "scale(1.25)"; birthdayNumber.style.opacity = "0";
-                setTimeout(() => {
-                    birthdayNumber.textContent = "22";
-                    birthdayNumber.classList.remove('number-pulse');
-                    birthdayNumber.style.transform = "scale(0.7)"; birthdayNumber.style.opacity = "0";
-                    requestAnimationFrame(() => { birthdayNumber.style.transform = "scale(1)"; birthdayNumber.style.opacity = "1"; birthdayNumber.classList.add('number-pulse'); });
-                }, 350);
-            }, 1500);
-            setTimeout(() => { birthdayOverlay.classList.remove('active'); birthdayNumber.classList.remove('number-pulse'); birthdayNumber.style.transform = ""; birthdayNumber.style.opacity = ""; setTimeout(() => { if (isBlownOut) swipeHint.classList.add('show'); }, 400); }, 4500);
-        }
+                polaroid.classList.add('revealed');
 
-        function blowOutCandle() {
-            if (isBlownOut) return;
-            isBlownOut = true;
-            flame.classList.add('blown-out');
-            cakeContainer.classList.add('blown');
-            updateMessage("Happy Birthday, Bebi!");
-            startConfetti();
-            playBirthdayTransition();
-            revealAndPopPolaroids();
+                setTimeout(() => {
+                    polaroid.classList.add('blow-glow');
+
+                    setTimeout(() => {
+                        polaroid.classList.remove('blow-glow');
+                    }, 450);
+
+                }, 50);
+
+            }, idx * 80);
+        });
+    }
+
+    // =========================
+    // BIRTHDAY TRANSITION
+    // =========================
+    function playBirthdayTransition() {
+        if (!birthdayOverlay) return;
+
+        birthdayOverlay.classList.add('active');
+        birthdayNumber.classList.add('number-pulse');
+        birthdayNumber.textContent = "21";
+
+        setTimeout(() => {
+
+            birthdayNumber.style.transform = "scale(1.25)";
+            birthdayNumber.style.opacity = "0";
+
+            setTimeout(() => {
+
+                birthdayNumber.textContent = "22";
+
+                birthdayNumber.classList.remove('number-pulse');
+
+                birthdayNumber.style.transform = "scale(0.7)";
+                birthdayNumber.style.opacity = "0";
+
+                requestAnimationFrame(() => {
+                    birthdayNumber.style.transform = "scale(1)";
+                    birthdayNumber.style.opacity = "1";
+                    birthdayNumber.classList.add('number-pulse');
+                });
+
+            }, 350);
+
+        }, 1500);
+
+        setTimeout(() => {
+
+            birthdayOverlay.classList.remove('active');
+            birthdayNumber.classList.remove('number-pulse');
+
+            birthdayNumber.style.transform = "";
+            birthdayNumber.style.opacity = "";
+
+            setTimeout(() => {
+                if (isBlownOut) {
+                    swipeHint.classList.add('show');
+                }
+            }, 400);
+
+        }, 4500);
+    }
+
+    // =========================
+    // BLOW OUT
+    // =========================
+    function blowOutCandle() {
+        if (isBlownOut) return;
+
+        isBlownOut = true;
+
+        flame.classList.add('blown-out');
+        cakeContainer.classList.add('blown');
+
+        updateMessage("Happy Birthday, Bebi!");
+
+        startConfetti();
+        playBirthdayTransition();
+        revealAndPopPolaroids();
+
+        closeMicrophone();
+    }
+
+    // =========================
+    // MICROPHONE
+    // =========================
+    async function initMicrophone() {
+
+        if (audioContext && audioContext.state !== 'closed') {
             closeMicrophone();
         }
 
-        async function initMicrophone() {
-            if (audioContext && audioContext.state !== 'closed') closeMicrophone();
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaStream = stream;
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyserNode = audioContext.createAnalyser();
-                analyserNode.fftSize = 256;
-                const bufferLength = analyserNode.frequencyBinCount;
-                const dataArray = new Uint8Array(bufferLength);
-                sourceNode = audioContext.createMediaStreamSource(stream);
-                sourceNode.connect(analyserNode);
-                if (audioContext.state === 'suspended') await audioContext.resume();
-                isMicActive = true;
-                if (animationFrameId) cancelAnimationFrame(animationFrameId);
-                function checkVolume() {
-                    if (!analyserNode || !isMicActive || isBlownOut) { if (animationFrameId) cancelAnimationFrame(animationFrameId); return; }
-analyserNode.getByteFrequencyData(dataArray);
+        try {
 
-let sum = 0;
-
-for (let i = 0; i < bufferLength; i++) {
-    sum += dataArray[i];
-}
-
-const volumeEstimate = sum / bufferLength;
-                    const now = Date.now();
-                    if (volumeEstimate > BLOW_THRESHOLD && (now - lastBlowTime) > BLOW_COOLDOWN_MS) { lastBlowTime = now; blowOutCandle(); }
-                    animationFrameId = requestAnimationFrame(checkVolume);
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
                 }
-                checkVolume();
-            } catch (err) { console.error("Microphone error:", err); updateMessage("🔇 Mic needed! Tap cake & allow mic."); isMicActive = false; }
+            });
+
+            mediaStream = stream;
+
+            audioContext = new (
+                window.AudioContext ||
+                window.webkitAudioContext
+            )();
+
+            analyserNode = audioContext.createAnalyser();
+
+            analyserNode.fftSize = 256;
+
+            const bufferLength = analyserNode.frequencyBinCount;
+
+            const dataArray = new Uint8Array(bufferLength);
+
+            sourceNode = audioContext.createMediaStreamSource(stream);
+
+            sourceNode.connect(analyserNode);
+
+            // IMPORTANT FOR IOS
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+
+            isMicActive = true;
+
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+
+            function checkVolume() {
+
+                if (
+                    !analyserNode ||
+                    !isMicActive ||
+                    isBlownOut
+                ) {
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                    }
+                    return;
+                }
+
+                // BETTER DETECTION
+                analyserNode.getByteFrequencyData(dataArray);
+
+                let sum = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    sum += dataArray[i];
+                }
+
+                const volumeEstimate = sum / bufferLength;
+
+                // DEBUG
+                console.log("Volume:", volumeEstimate);
+
+                const now = Date.now();
+
+                if (
+                    volumeEstimate > BLOW_THRESHOLD &&
+                    (now - lastBlowTime) > BLOW_COOLDOWN_MS
+                ) {
+                    lastBlowTime = now;
+                    blowOutCandle();
+                }
+
+                animationFrameId = requestAnimationFrame(checkVolume);
+            }
+
+            checkVolume();
+
+        } catch (err) {
+
+            console.error("Microphone error:", err);
+
+            updateMessage("🔇 Mic needed! Tap cake & allow mic.");
+
+            isMicActive = false;
+        }
+    }
+
+    function closeMicrophone() {
+
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
         }
 
-        function closeMicrophone() {
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            if (sourceNode) try { sourceNode.disconnect(); } catch(e) {}
-            if (analyserNode) try { analyserNode.disconnect(); } catch(e) {}
-            if (audioContext) audioContext.close().catch(e => console.warn);
-            if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
-            sourceNode = null; analyserNode = null; audioContext = null; mediaStream = null; isMicActive = false;
+        if (sourceNode) {
+            try {
+                sourceNode.disconnect();
+            } catch (e) {}
         }
 
-        function onCakeTouch() { if (cakeTouched || isBlownOut) return; cakeTouched = true; updateMessage("Blow the candle!"); initMicrophone(); }
+        if (analyserNode) {
+            try {
+                analyserNode.disconnect();
+            } catch (e) {}
+        }
 
-        function openPolaroidModal(imgSrc, captionText) { if(modal) { modalImg.src = imgSrc; modalCaption.textContent = captionText; modal.classList.add('active'); document.body.style.overflow = 'hidden'; } }
-        function closeModal() { if(modal) { modal.classList.remove('active'); document.body.style.overflow = ''; setTimeout(() => { if(!modal.classList.contains('active')) modalImg.src = ''; }, 200); } }
+        if (audioContext) {
+            audioContext.close().catch(() => {});
+        }
 
-        polaroids.forEach(p => {
-            const imgEl = p.querySelector('.polaroid-img');
-            const captionDiv = p.querySelector('.polaroid-caption');
-            let highResSrc = p.getAttribute('data-img-src');
-            if (!highResSrc && imgEl) highResSrc = imgEl.src;
-            p.addEventListener('click', (e) => { e.stopPropagation(); openPolaroidModal(highResSrc, captionDiv ? captionDiv.textContent.trim() : ''); if (navigator.vibrate) navigator.vibrate(30); });
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+        }
+
+        sourceNode = null;
+        analyserNode = null;
+        audioContext = null;
+        mediaStream = null;
+        isMicActive = false;
+    }
+
+    // =========================
+    // CAKE TOUCH
+    // =========================
+    function onCakeTouch() {
+
+        if (cakeTouched || isBlownOut) return;
+
+        cakeTouched = true;
+
+        updateMessage("Blow the candle!");
+
+        initMicrophone();
+    }
+
+    // =========================
+    // POLAROID MODAL
+    // =========================
+    function openPolaroidModal(imgSrc, captionText) {
+
+        if (!modal) return;
+
+        modalImg.src = imgSrc;
+        modalCaption.textContent = captionText;
+
+        modal.classList.add('active');
+
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+
+        if (!modal) return;
+
+        modal.classList.remove('active');
+
+        document.body.style.overflow = '';
+
+        setTimeout(() => {
+            if (!modal.classList.contains('active')) {
+                modalImg.src = '';
+            }
+        }, 200);
+    }
+
+    polaroids.forEach(p => {
+
+        const imgEl = p.querySelector('.polaroid-img');
+
+        const captionDiv = p.querySelector('.polaroid-caption');
+
+        let highResSrc = p.getAttribute('data-img-src');
+
+        if (!highResSrc && imgEl) {
+            highResSrc = imgEl.src;
+        }
+
+        p.addEventListener('click', (e) => {
+
+            e.stopPropagation();
+
+            openPolaroidModal(
+                highResSrc,
+                captionDiv ? captionDiv.textContent.trim() : ''
+            );
+
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
         });
-        if (modal) { modal.addEventListener('click', closeModal); modalCard?.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); }); }
+    });
 
-        let touchStartY = 0;
-        window.addEventListener('touchstart', (e) => { touchStartY = e.changedTouches[0].screenY; }, { passive: true });
-        window.addEventListener('touchend', (e) => { const swipeDistance = touchStartY - e.changedTouches[0].screenY; if (swipeDistance > 80 && isBlownOut) { swipeHint.classList.remove('show'); birthdayLetterModal.classList.add('active'); document.body.style.overflow = 'hidden'; } }, { passive: true });
-        function closeBirthdayLetter() { birthdayLetterModal.classList.remove('active'); document.body.style.overflow = ''; }
-        if(birthdayLetterModal) { birthdayLetterModal.addEventListener('click', (e) => { if(e.target === birthdayLetterModal) closeBirthdayLetter(); }); const paperCard = birthdayLetterModal.querySelector('.paper-modal'); if(paperCard) paperCard.addEventListener('click', (e) => e.stopPropagation()); }
+    if (modal) {
 
-        cakeContainer.addEventListener('click', (e) => { e.stopPropagation(); onCakeTouch(); });
-        cakeContainer.addEventListener('touchstart', (e) => { e.stopPropagation(); onCakeTouch(); });
-        window.addEventListener('beforeunload', () => { closeMicrophone(); stopConfetti(); closeModal(); });
-        updateMessage("Touch the cake, bebi");
-    })();
-    </script>
+        modal.addEventListener('click', closeModal);
+
+        modalCard?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeModal();
+        });
+    }
+
+    // =========================
+    // SWIPE LETTER
+    // =========================
+    let touchStartY = 0;
+
+    window.addEventListener(
+        'touchstart',
+        (e) => {
+            touchStartY = e.changedTouches[0].screenY;
+        },
+        { passive: true }
+    );
+
+    window.addEventListener(
+        'touchend',
+        (e) => {
+
+            const swipeDistance =
+                touchStartY - e.changedTouches[0].screenY;
+
+            if (swipeDistance > 80 && isBlownOut) {
+
+                swipeHint.classList.remove('show');
+
+                birthdayLetterModal.classList.add('active');
+
+                document.body.style.overflow = 'hidden';
+            }
+
+        },
+        { passive: true }
+    );
+
+    function closeBirthdayLetter() {
+
+        birthdayLetterModal.classList.remove('active');
+
+        document.body.style.overflow = '';
+    }
+
+    if (birthdayLetterModal) {
+
+        birthdayLetterModal.addEventListener('click', (e) => {
+
+            if (e.target === birthdayLetterModal) {
+                closeBirthdayLetter();
+            }
+        });
+
+        const paperCard =
+            birthdayLetterModal.querySelector('.paper-modal');
+
+        if (paperCard) {
+            paperCard.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+    }
+
+    // =========================
+    // EVENTS
+    // =========================
+    cakeContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onCakeTouch();
+    });
+
+    cakeContainer.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        onCakeTouch();
+    });
+
+    // IOS AUDIO FIX
+    document.addEventListener(
+        'touchstart',
+        async () => {
+            if (
+                audioContext &&
+                audioContext.state === 'suspended'
+            ) {
+                await audioContext.resume();
+            }
+        },
+        { once: true }
+    );
+
+    window.addEventListener('beforeunload', () => {
+        closeMicrophone();
+        stopConfetti();
+        closeModal();
+    });
+
+    updateMessage("Touch the cake, bebi");
+
+})();
+</script>
 </body>
 </html>
